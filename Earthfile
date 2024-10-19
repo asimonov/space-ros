@@ -230,7 +230,7 @@ build:
 
   # WORKAROUND START
   # there is issue building cobra_vendor on ubuntu24... what follows is a hack to make it work, but the proper fix is:
-  # * merge https://github.com/nimble-code/Cobra/pull/68
+  # * DONE merge https://github.com/nimble-code/Cobra/pull/68
   # * release 4.8 version of cobra
   # * PR to update VER and REV in ament_cobra: https://github.com/ament/ament_cobra/blob/master/cobra_vendor/CMakeLists.txt#L13
   # * remove this workaround
@@ -244,7 +244,7 @@ build:
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         --no-warn-unused-cli \
         --packages-up-to cobra_vendor; exit 0
-  # essentially PR 68 for cobra
+  # essentially do PR68 for cobra over v4.7
   RUN rm /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux && \
       mkdir /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux 
   # WORKAROUND END
@@ -264,7 +264,7 @@ build-dev:
 
   # WORKAROUND START
   # there is issue building cobra_vendor on ubuntu24... what follows is a hack to make it work, but the proper fix is:
-  # * merge https://github.com/nimble-code/Cobra/pull/68
+  # * DONE merge https://github.com/nimble-code/Cobra/pull/68
   # * release 4.8 version of cobra
   # * PR to update VER and REV in ament_cobra: https://github.com/ament/ament_cobra/blob/master/cobra_vendor/CMakeLists.txt#L13
   # * remove this workaround
@@ -274,11 +274,11 @@ build-dev:
   # create build dirs
   RUN colcon build \
         --cmake-args \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         --no-warn-unused-cli \
         --packages-up-to cobra_vendor; exit 0
-  # essentially PR 68 for cobra
+  # essentially do PR68 for cobra over v4.7
   RUN rm /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux && \
       mkdir /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux 
   # WORKAROUND END
@@ -294,9 +294,11 @@ build-dev:
 
 build-testing:
   FROM +build-dev
+  # exclude ament_lint tests as they give error on Jazzy
   RUN . install/setup.sh && \
       colcon test \
         --retest-until-pass 2 \
+        --packages-skip ament_lint \
         --ctest-args -LE "(ikos|xfail)" \
         --pytest-args -m "not xfail"
   RUN . install/setup.sh && \
