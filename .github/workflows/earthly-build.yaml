@@ -2,7 +2,7 @@ name: Earthly build
 on:
   workflow_dispatch:
   push:
-    branches: ['main']
+    branches: ['main', 'jazzy']
     tags: ['*']
   pull_request:
   schedule:
