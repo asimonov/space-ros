@@ -143,7 +143,8 @@ spaceros-artifacts:
   # we run vcstool inside this task, because some packages in `ros2.repos` are not pinned and otherwise
   # earthly won't pull latest changes
   RUN mkdir src
-  RUN vcs import --shallow --retry 3 --input ros2.repos src
+  # TODO restore shallow after cobra_vendor merge
+  RUN vcs import --retry 3 --input ros2.repos src
   RUN vcs export --exact src > exact.repos
 
   SAVE ARTIFACT ros2.repos
@@ -156,7 +157,8 @@ sources:
   COPY +spaceros-artifacts/excluded-pkgs.txt excluded-pkgs.txt
   COPY +spaceros-artifacts/exact.repos exact.repos
   RUN mkdir src
-  RUN vcs import --shallow --retry 3 --input exact.repos src
+  # TODO restore shallow after cobra_vendor merge
+  RUN vcs import --retry 3 --input exact.repos src
   SAVE ARTIFACT src AS LOCAL src
 
 vcs-exact:
@@ -229,24 +231,10 @@ build:
   FROM +rosdep
 
   # WORKAROUND START
-  # there is issue building cobra_vendor on ubuntu24... what follows is a hack to make it work, but the proper fix is:
-  # * DONE merge https://github.com/nimble-code/Cobra/pull/68
-  # * release 4.8 version of cobra
-  # * PR to update VER and REV in ament_cobra: https://github.com/ament/ament_cobra/blob/master/cobra_vendor/CMakeLists.txt#L13
-  # * remove this workaround
-  # use cobra 4.7
-  RUN sed -i 's/VER "4.1"/VER "4.7"/g' /opt/spaceros/src/ament_cobra/cobra_vendor/CMakeLists.txt
-  RUN sed -i s/09a5e421bfa7b84d5fca651d3ae3a93e7c30389f/be00dc6bb66d2d1481f0bc91ef630744fd33c9e0/g /opt/spaceros/src/ament_cobra/cobra_vendor/CMakeLists.txt
-  # create build dirs
-  RUN colcon build \
-        --cmake-args \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        --no-warn-unused-cli \
-        --packages-up-to cobra_vendor; exit 0
-  # essentially do PR68 for cobra over v4.7
-  RUN rm /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux && \
-      mkdir /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux 
+  # * PR to update Cobra version to 4.8 in ament_cobra: https://github.com/ament/ament_cobra/pull/21
+  RUN cd /opt/spaceros/src/ament_cobra && echo "ok" && \
+      git fetch origin pull/21/head:pr21_cobra_version && \
+      git checkout pr21_cobra_version 
   # WORKAROUND END
 
   RUN colcon build \
@@ -263,31 +251,17 @@ build-dev:
   ARG tag='jazzy'
 
   # WORKAROUND START
-  # there is issue building cobra_vendor on ubuntu24... what follows is a hack to make it work, but the proper fix is:
-  # * DONE merge https://github.com/nimble-code/Cobra/pull/68
-  # * release 4.8 version of cobra
-  # * PR to update VER and REV in ament_cobra: https://github.com/ament/ament_cobra/blob/master/cobra_vendor/CMakeLists.txt#L13
-  # * remove this workaround
-  # use cobra 4.7
-  RUN sed -i 's/VER "4.1"/VER "4.7"/g' /opt/spaceros/src/ament_cobra/cobra_vendor/CMakeLists.txt
-  RUN sed -i s/09a5e421bfa7b84d5fca651d3ae3a93e7c30389f/be00dc6bb66d2d1481f0bc91ef630744fd33c9e0/g /opt/spaceros/src/ament_cobra/cobra_vendor/CMakeLists.txt
-  # create build dirs
-  RUN colcon build \
-        --cmake-args \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        --no-warn-unused-cli \
-        --packages-up-to cobra_vendor; exit 0
-  # essentially do PR68 for cobra over v4.7
-  RUN rm /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux && \
-      mkdir /opt/spaceros/build/cobra_vendor/cobra-4.7/src/cobra-4.7/bin_linux 
+  # * PR to update Cobra version to 4.8 in ament_cobra: https://github.com/ament/ament_cobra/pull/21
+  RUN cd /opt/spaceros/src/ament_cobra  && echo "ok" &&  \
+      git fetch origin pull/21/head:pr21_cobra_version && \
+      git checkout pr21_cobra_version 
   # WORKAROUND END
 
   RUN colcon build \
       --cmake-args \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-      --no-warn-unused-cli 
+      --no-warn-unused-cli
 
   # TODO: Consider pushing pre-built dev images to the registry.
   # SAVE IMAGE --push osrf/space-ros-dev:latest osrf/space-ros-dev:$tag
