@@ -90,6 +90,11 @@ setup:
   # Create the spaceros directory
   RUN mkdir --mode=777 -p ${SPACEROS_DIR}
 
+  # fix ubuntu24 issues where some base ubuntu24 images have uid 1000 for 'ubuntu' user.
+  # this clashes with default host uid of 1000.
+  # https://askubuntu.com/questions/1513927/ubuntu-24-04-docker-images-now-includes-user-ubuntu-with-uid-gid-1000
+  RUN userdel -r ubuntu
+
   # Create a spaceros user
   RUN useradd -m ${USERNAME} && \
     echo "${USERNAME}:${USERNAME}" | chpasswd && \
@@ -116,13 +121,13 @@ repos-file:
   COPY spaceros-pkgs.txt ./
   COPY spaceros.repos ./
   # This is a fresh image, so we do not need to exclude installed packages.
-  RUN --no-cache sh scripts/generate-repos.sh \
+  RUN sh scripts/generate-repos.sh \
                  --outfile ros2.repos \
                  --packages spaceros-pkgs.txt \
                  --excluded-packages excluded-pkgs.txt \
                  --exclude-installed false \
                  --rosdistro ${ROS_DISTRO}
-  RUN --no-cache python3 scripts/merge-repos.py ros2.repos spaceros.repos -o output.repos
+  RUN python3 scripts/merge-repos.py ros2.repos spaceros.repos -o output.repos
   SAVE ARTIFACT output.repos AS LOCAL ros2.repos
 
 spaceros-artifacts:
@@ -135,7 +140,7 @@ spaceros-artifacts:
   COPY excluded-pkgs.txt ./
 
   # this ensure the vcs import and export results are not cached
-  RUN --no-cache echo "Cloning spaceros repo artifacts"
+  RUN echo "Cloning spaceros repo artifacts"
 
   # we run vcstool inside this task, because some packages in `ros2.repos` are not pinned and otherwise
   # earthly won't pull latest changes
